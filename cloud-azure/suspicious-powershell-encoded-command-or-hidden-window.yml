@@ -1,0 +1,48 @@
+title: Suspicious PowerShell Encoded Command or Hidden Window
+logsource:
+  category: process_creation
+  product: windows
+  service: security
+detection:
+  selection_powershell_path:
+    Image|endswith:
+      - \powershell.exe
+      - \pwsh.exe
+  selection_encoded_command:
+    CommandLine|contains:
+      - ' -e '
+      - ' -en '
+      - ' -enc '
+      - ' -encodedcommand '
+  selection_hidden_window:
+    CommandLine|contains:
+      - ' -w hidden'
+      - ' -windowstyle hidden'
+      - ' -nop -w h'
+  selection_invoke_expression:
+    CommandLine|contains:
+      - 'iex '
+      - Invoke-Expression
+      - .invoke
+      - DownloadString
+      - DownloadFile
+      - 'iwr '
+      - 'irm '
+      - FromBase64String
+  condition: >-
+    selection_powershell_path and (selection_encoded_command or
+    (selection_hidden_window and selection_invoke_expression))
+level: high
+description: >-
+  Detects the execution of PowerShell with command-line arguments that indicate
+  obfuscation, such as Base64 encoding, hidden windows, or in-memory
+  execution/download cradles. This technique is frequently used by malware like
+  Lumma Stealer to conceal malicious activity.
+author: detections.ai
+falsepositives:
+  - Legitimate administration or management scripts may use these techniques.
+    Tuning may be required based on legitimate scripting activity in the
+    environment.
+references:
+  - >-
+    https://www.microsoft.com/en-us/security/blog/2025/05/21/lumma-stealer-breaking-down-the-delivery-techniques-and-capabilities-of-a-prolific-infostealer/
